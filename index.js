@@ -51,10 +51,6 @@ LanbonSwitch.COMMAND_MAP = {
 LanbonSwitch.prototype = {
 
     udpRequest: function(host, port, payload, callback) {
-        this.log.info('host: ' + host);
-        this.log.info('port: ' + port);
-        this.log.info('payload: ' + payload);
-
         udp(host, port, payload, function (err) {
             callback(err);
         });
