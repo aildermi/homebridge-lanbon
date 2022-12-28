@@ -38,7 +38,7 @@ function LanbonSwitch(log, config) {
 
     this.name            = config.name || 'LanbonSwitch';
     this.switchType      = config.switch_type || 3;           
-    this.multiSwitch     = config.multiSwitch || Array.from({length: this.switchType}, (_, i) => i + 1);
+    this.multiSwitch     = config.multi_switch || Array.from({length: this.switchType}, (_, i) => i + 1);
     this.deviceId        = config.device_id;
     this.host            = config.host;
     this.port            = 8866;
