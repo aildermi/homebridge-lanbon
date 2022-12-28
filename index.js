@@ -93,7 +93,7 @@ LanbonSwitch.prototype = {
         const header = "aa21a010";
         const extra = "0021a0100000000000000000000000000000000000";
         let command = LanbonSwitch.COMMAND_MAP[this.switchType][this.state]
-        let payload = header + command[0] + this.deviceId + this.switchType + command[1] + extra
+        let payload = header + command[0] + this.deviceId + "0" + this.switchType + command[1] + extra
         this.udpRequest(this.host, this.port, payload, function(error) {
             if (error) {
                 this.log.error('setPowerState failed: ' + error.message);
