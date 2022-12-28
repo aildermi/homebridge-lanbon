@@ -10,28 +10,42 @@ module.exports = function (homebridge) {
     homebridge.registerAccessory('homebridge-udp-multiswitch', 'UdpMultiswitch', UdpMultiswitch);
 };
 
+COMMAND_MAP = {
+    1: {
+        0: ["a9", "00"],
+        1: ["aa", "01"],
+    },
+    2: {
+        0: ["ad", "00"],
+        1: ["ae", "01"],
+        2: ["af", "02"],
+        3: ["a0", "03"],
+    },
+    3: {
+        0: ["b7", "00"],
+        1: ["a8", "01"],
+        2: ["a9", "02"],
+        3: ["aa", "03"],
+        4: ["ab", "04"],
+        5: ["ac", "05"],
+        6: ["ad", "06"],
+        7: ["ae", "07"],
+    }
+}
+
 function UdpMultiswitch(log, config) {
     this.log = log;
 
     this.name            = config.name || 'MultiSwitch';
-    this.switchType      = config.switch_type;           
+    this.switchType      = config.switch_type || 3;           
+    this.multiSwitch     = config.multiSwitch || Array.from({length: this.switchType}, (_, i) => i + 1);
+    this.deviceId        = config.device_id;
     this.host            = config.host;
-    this.port            = config.port || 80;
+    this.port            = 8866;
+    this.state           = 0;
 
-    this.onPayload      = config.on_payload;
-    this.offPayload     = config.off_payload;
-
-    this.multiswitch     = config.multiswitch;
-
-    switch (this.switchType) {
-        case 'Switch':
-            break;
-        case 'Multiswitch':
-            break;
-
-        default:
-            throw new Error('Unknown homebridge-udp-multiswitch switch type');
-    }
+    if (this.switchType < 1 || this.switchType > 3)
+        throw new Error('Unknown homebridge-udp-multiswitch switch type');
 }
 
 UdpMultiswitch.prototype = {
@@ -55,37 +69,25 @@ UdpMultiswitch.prototype = {
             return;
         }
 
-        switch(this.switchType) {
-            case 'Switch':
-                if (!this.onPayload || !this.offPayload) {
-                    this.log.warn('Ignoring request; No power state payloads defined.');
-                    callback(new Error('No power state payloads defined.'));
-                    return;
-                }
+        this.services.forEach(function (switchService, idx) {
+            if (idx === 0) {
+                // Don't check the informationService which is at idx=0
+                return;
+            }
 
-                payload  = powerState ? this.onPayload  : this.offPayload;
-                break;
+            if (targetService.subtype === switchService.subtype) {
+                const onState = 1 << (idx - 1)
+                if(powerState)
+                    this.state |= onState;
+                else
+                    this.state &= (1<<this.switchType) - 1 - onState
 
-            case 'Multiswitch':
-                this.services.forEach(function (switchService, idx) {
-                    if (idx === 0) {
-                        // Don't check the informationService which is at idx=0
-                        return;
-                    }
-
-                    if (targetService.subtype === switchService.subtype) {
-                        payload = this.multiswitch[idx-1].payload;
-                        
-                    } else {
-                        switchService.getCharacteristic(Characteristic.On).setValue(false, undefined, funcContext);
-                    }
-                }.bind(this));
-                break;
-
-            default:
-                this.log('Unknown homebridge-udp-multiswitch type in setPowerState');
-        }
-
+            }
+        }.bind(this));
+        const header = "aa21a010";
+        const extra = "0021a0100000000000000000000000000000000000";
+        command = COMMAND_MAP[this.switchType][this.state]
+        payload = header + command[0] + this.deviceId + this.switchType + command[1] + extra
         this.udpRequest(this.host, this.port, payload, function(error) {
             if (error) {
                 this.log.error('setPowerState failed: ' + error.message);
@@ -93,16 +95,7 @@ UdpMultiswitch.prototype = {
             
                 callback(error);
             } else {
-                switch (this.switchType) {
-                    case 'Switch':
-                        this.log.info('==> ' + (powerState ? "On" : "Off"));
-                        break;
-                    case 'Multiswitch':
-                        this.log('==> ' + targetService.subtype);
-                        break;
-                    default:
-                        this.log.error('Unknown switchType in request callback');
-                }
+                this.log.info('==> ' + (this.state));
             }
             callback();
         }.bind(this));
@@ -122,50 +115,30 @@ UdpMultiswitch.prototype = {
             .setCharacteristic(Characteristic.Model, 'Udp-MultiSwitch');
         this.services.push(informationService);
 
-        switch (this.switchType) {
-            case 'Switch':
-                this.log('(switch)');
+        this.log('(multiswitch)');
 
-                var switchService = new Service.Switch(this.name);
-                switchService
-                    .getCharacteristic(Characteristic.On)
-                    .on('set', this.setPowerState.bind(this, switchService));
+        for (var i = 0; i < this.switchType; i++) {
+            var switchName = this.name + " " + this.multiSwitch[i];
 
-                this.services.push(switchService);
+            switch(i) {
+                case 0:
+                    this.log.warn('---+--- ' + switchName); break;
+                default:
+                    this.log.warn('   |--- ' + switchName);
+            }
 
-                break;
-            case 'Multiswitch':
-                this.log('(multiswitch)');
+            var switchService = new Service.Switch(switchName, switchName);
 
-                for (var i = 0; i < this.multiswitch.length; i++) {
-                    var switchName = this.multiswitch[i].name;
+            // Bind a copy of the setPowerState function that sets 'this' to the accessory and the first parameter
+            // to the particular service that it is being called for. 
+            var boundSetPowerState = this.setPowerState.bind(this, switchService);
+            switchService
+                .getCharacteristic(Characteristic.On)
+                .on('set', boundSetPowerState);
 
-                    switch(i) {
-                        case 0:
-                            this.log.warn('---+--- ' + switchName); break;
-                        case this.multiswitch.length-1:
-                            this.log.warn('   +--- ' + switchName); break;
-                        default:
-                            this.log.warn('   |--- ' + switchName);
-                    }
-
-                    var switchService = new Service.Switch(switchName, switchName);
-
-                    // Bind a copy of the setPowerState function that sets 'this' to the accessory and the first parameter
-                    // to the particular service that it is being called for. 
-                    var boundSetPowerState = this.setPowerState.bind(this, switchService);
-                    switchService
-                        .getCharacteristic(Characteristic.On)
-                        .on('set', boundSetPowerState);
-
-                    this.services.push(switchService);
-                }
-
-                break;
-            default:
-                this.log('Unknown homebridge-udp-multiswitch type in getServices');
+            this.services.push(switchService);
         }
-        
+
         return this.services;
     }
 };
