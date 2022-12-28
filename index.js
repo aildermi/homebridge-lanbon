@@ -10,7 +10,22 @@ module.exports = function (homebridge) {
     homebridge.registerAccessory('homebridge-lanbon', 'LanbonSwitch', LanbonSwitch);
 };
 
-COMMAND_MAP = {
+function LanbonSwitch(log, config) {
+    this.log = log;
+
+    this.name            = config.name || 'LanbonSwitch';
+    this.switchType      = config.switch_type || 3;           
+    this.multiSwitch     = config.multi_switch || Array.from({length: this.switchType}, (_, i) => i + 1);
+    this.deviceId        = config.device_id;
+    this.host            = config.host;
+    this.port            = 8866;
+    this.state           = 0;
+
+    if (this.switchType < 1 || this.switchType > 3)
+        throw new Error('Unknown homebridge-lanbon switch type');
+}
+
+LanbonSwitch.COMMAND_MAP = {
     1: {
         0: ["a9", "00"],
         1: ["aa", "01"],
@@ -31,21 +46,6 @@ COMMAND_MAP = {
         6: ["ad", "06"],
         7: ["ae", "07"],
     }
-}
-
-function LanbonSwitch(log, config) {
-    this.log = log;
-
-    this.name            = config.name || 'LanbonSwitch';
-    this.switchType      = config.switch_type || 3;           
-    this.multiSwitch     = config.multi_switch || Array.from({length: this.switchType}, (_, i) => i + 1);
-    this.deviceId        = config.device_id;
-    this.host            = config.host;
-    this.port            = 8866;
-    this.state           = 0;
-
-    if (this.switchType < 1 || this.switchType > 3)
-        throw new Error('Unknown homebridge-lanbon switch type');
 }
 
 LanbonSwitch.prototype = {
@@ -86,7 +86,7 @@ LanbonSwitch.prototype = {
         }.bind(this));
         const header = "aa21a010";
         const extra = "0021a0100000000000000000000000000000000000";
-        command = COMMAND_MAP[this.switchType][this.state]
+        command = LanbonSwitch.COMMAND_MAP[this.switchType][this.state]
         payload = header + command[0] + this.deviceId + this.switchType + command[1] + extra
         this.udpRequest(this.host, this.port, payload, function(error) {
             if (error) {
