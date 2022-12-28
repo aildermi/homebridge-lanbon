@@ -82,9 +82,10 @@ LanbonSwitch.prototype = {
                 else
                     this.state &= (1<<this.switchType) - 1 - onState
 
+            } else {
+                const onValue = (this.state >> (idx - 1)) % 2 == 1 ? true : false
+                switchService.getCharacteristic(Characteristic.On).setValue(onValue, undefined, funcContext);
             }
-            const onValue = (this.state >> (idx - 1)) % 2 == 1 ? true : false
-            switchService.getCharacteristic(Characteristic.On).setValue(onValue, undefined, funcContext);
     }.bind(this));
         const header = "aa21a010";
         const extra = "0021a0100000000000000000000000000000000000";
