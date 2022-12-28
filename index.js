@@ -7,7 +7,7 @@ var udp = require('./udp');
 module.exports = function (homebridge) {
     Service = homebridge.hap.Service;
     Characteristic = homebridge.hap.Characteristic;
-    homebridge.registerAccessory('homebridge-udp-multiswitch', 'UdpMultiswitch', UdpMultiswitch);
+    homebridge.registerAccessory('homebridge-lanbon', 'LanbonSwitch', LanbonSwitch);
 };
 
 COMMAND_MAP = {
@@ -33,10 +33,10 @@ COMMAND_MAP = {
     }
 }
 
-function UdpMultiswitch(log, config) {
+function LanbonSwitch(log, config) {
     this.log = log;
 
-    this.name            = config.name || 'MultiSwitch';
+    this.name            = config.name || 'LanbonSwitch';
     this.switchType      = config.switch_type || 3;           
     this.multiSwitch     = config.multiSwitch || Array.from({length: this.switchType}, (_, i) => i + 1);
     this.deviceId        = config.device_id;
@@ -45,10 +45,10 @@ function UdpMultiswitch(log, config) {
     this.state           = 0;
 
     if (this.switchType < 1 || this.switchType > 3)
-        throw new Error('Unknown homebridge-udp-multiswitch switch type');
+        throw new Error('Unknown homebridge-lanbon switch type');
 }
 
-UdpMultiswitch.prototype = {
+LanbonSwitch.prototype = {
 
     udpRequest: function(host, port, payload, callback) {
         udp(host, port, payload, function (err) {
@@ -111,8 +111,8 @@ UdpMultiswitch.prototype = {
 
         var informationService = new Service.AccessoryInformation();
         informationService
-            .setCharacteristic(Characteristic.Manufacturer, 'Udp-MultiSwitch')
-            .setCharacteristic(Characteristic.Model, 'Udp-MultiSwitch');
+            .setCharacteristic(Characteristic.Manufacturer, 'LanbonSwitch')
+            .setCharacteristic(Characteristic.Model, 'LanbonSwitch');
         this.services.push(informationService);
 
         this.log('(multiswitch)');
