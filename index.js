@@ -58,7 +58,6 @@ LanbonSwitch.prototype = {
 
     setPowerState: function(targetService, powerState, callback, context) {
         var funcContext = 'fromSetPowerState';
-        var payload;
 
         // Callback safety
         if (context == funcContext) {
