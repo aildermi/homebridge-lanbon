@@ -1,7 +1,7 @@
 # homebridge-lanbon
 Lanbon switch plugin for Homebridge - stateful switches
 
-*Forked from homebridge-udp-multiswitch
+* Forked from homebridge-udp-multiswitch
 
 _________________________________________
 
@@ -34,3 +34,8 @@ _________________________________________
 1. Install homebridge using: `npm install -g homebridge`
 2. Install homebridge-http using: `npm install -g homebridge-lanbon`
 3. Update your config file
+
+
+## Reference
+
+1. https://jan.newmarch.name/IoT/Home/Lanbon/
